@@ -1,13 +1,5 @@
 #pragma once
 
-//  Input Thread - parses the file into lines and places them in the storage of source lines(InputStorage)
-//	after the entire file has been parsed into lines, set count equal to amount of lines.
-//	Thread pool (one or mo re threads) - pop a string from string storage, performs a search by mask and puts the search results in the Result Storage.
-//	If InputStorage.Empty && flag == no_data, the thread terminates
-//	Result Thread - fetches data from the result store and prints it to the console.
-//  If ResultStorage.Empty && flag == no_data && ThreadPool.Empty - the thread terminates
-//  When all threads have completed, we exit the program.
-
 #include <string>
 
 #include <boost/filesystem.hpp>
@@ -20,18 +12,21 @@ class SearchCore
 {
 private:
 
-	std::string _file, _mask;
-	std::vector<std::pair<int,std::string>> _input_storage;
-	std::vector<std::pair<std::pair<int,int>, std::string>> _result_storage;
+	std::string _file, _mask;	// file path and mask to search
+	std::vector<std::pair<int,std::string>> _input_storage; // lines storage
+	std::vector<std::pair<std::pair<int,int>, std::string>> _result_storage; // results
 
-	boost::mutex _mx_input;
+	boost::mutex _mx_input;	// mutex for lines storage
 
-	boost::mutex _mx;
+	boost::mutex _mx;		// mutex for other
 	int _ln_count;
 	bool _no_data;
 
 protected:
 
+	// *************************************
+	// split file to lines and insert it to storage
+	// *************************************
 	void load_lines()
 	{
 		boost::filesystem::ifstream fh_(_file);
@@ -52,6 +47,9 @@ protected:
 		_no_data = true;
 	}
 
+	// *************************************
+	// trying find results by mask specified
+	// *************************************
 	void search_result()
 	{
 		while (true)
@@ -64,10 +62,6 @@ protected:
 				{
 					boost::regex rx_(_mask);
 
-					//boost::regex_token_iterator<std::string::iterator> iter_{ (*it_).second.begin(), (*it_).second.end(), rx_ };
-					//boost::regex_token_iterator<std::string::iterator> end_;
-
-					//if (iter_ != end_)
 					boost::smatch what;
 					if (boost::regex_search((*it_).second, what, rx_))
 					{
@@ -93,6 +87,9 @@ protected:
 		}
 	}
 
+	// *************************************
+	// print results to console
+	// *************************************
 	void print_results()
 	{
 		std::cout << _result_storage.size() << std::endl;
@@ -108,6 +105,9 @@ protected:
 
 public:
 
+	// *************************************
+	// Construct the SearchCore object
+	// *************************************
 	SearchCore(std::string file, std::string mask)
 	{
 		_file = file;
@@ -120,6 +120,9 @@ public:
 		_ln_count = 0;
 	}
 
+	// *************************************
+	// main loop
+	// *************************************
 	void Run()
 	{
 		boost::thread input_thread(boost::bind(&SearchCore::load_lines, this));
